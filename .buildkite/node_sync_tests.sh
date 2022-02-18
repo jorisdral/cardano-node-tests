@@ -1,14 +1,20 @@
 #! /usr/bin/env nix-shell
-#! nix-shell -i bash -p python39Full python39Packages.virtualenv python39Packages.pip
+#! nix-shell -i bash -p python39Full python39Packages.virtualenv python39Packages.pip python39Packages.pandas
 #! nix-shell -I nixpkgs=./nix
 # shellcheck shell=bash
 
-pip install blockfrost-python
+set -xeuo pipefail
 
-tag_no1=$1
-tag_no2=$2
-hydra_eval_no1=$3
-hydra_eval_no2=$4
+WORKDIR="/scratch/workdir"
+rm -rf "$WORKDIR"
+mkdir -p "$WORKDIR"
 
-python ./sync_tests/node_sync_test.py -t1 "$tag_no1" -t2 "$tag_no2" -e "mainnet" -e1 "$hydra_eval_no1" -e2 "$hydra_eval_no2"
-python ./sync_tests/node_write_sync_values_to_db.py -e "mainnet"
+# create and activate python virtual env
+python3 -m venv "$WORKDIR/.env_sync"
+# shellcheck disable=SC1090,SC1091
+. "$WORKDIR/.env_sync/bin/activate"
+
+# install packages into python virtual env
+python3 -m pip install blockfrost-python
+
+python3 -c "import requests,pandas;"
