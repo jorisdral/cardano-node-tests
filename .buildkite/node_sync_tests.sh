@@ -13,9 +13,6 @@ python3 -m venv "$WORKDIR/.env_sync"
 # shellcheck disable=SC1090,SC1091
 . "$WORKDIR/.env_sync/bin/activate"
 
-# shellcheck disable=SC2046
-echo "test: $(python -c 'import sys, sys.prefix == sys.base_prefix')"
-
 echo " ==== install packages into python virtual env"
 pip install blockfrost-python pymysql requests psutil pandas
 

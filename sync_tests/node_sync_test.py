@@ -19,7 +19,7 @@ from pathlib import Path
 from psutil import process_iter
 
 from explorer_utils import get_epoch_start_datetime_from_explorer
-from blockfrost_utils import get_epoch_start_datetime_from_blockfrost
+# from blockfrost_utils import get_epoch_start_datetime_from_blockfrost
 
 from utils import seconds_to_time, date_diff_in_seconds, get_no_of_cpu_cores, \
     get_current_date_time, get_os_type, get_directory_size, get_total_ram_in_GB
@@ -538,7 +538,8 @@ def wait_for_node_to_sync(env):
             if actual_era not in era_details_dict:
                 current_time = datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%SZ")
                 if env == "mainnet":
-                    actual_era_start_time = get_epoch_start_datetime_from_blockfrost(actual_epoch)
+                    # actual_era_start_time = get_epoch_start_datetime_from_blockfrost(actual_epoch)
+                    actual_era_start_time = get_epoch_start_datetime_from_explorer(env, actual_epoch)
                 else:
                     actual_era_start_time = get_epoch_start_datetime_from_explorer(env, actual_epoch)
                 actual_era_dict = {"start_epoch": actual_epoch,
@@ -568,7 +569,8 @@ def wait_for_node_to_sync(env):
                     actual_epoch = 1
                 current_time = datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%SZ")
                 if env == "mainnet":
-                    actual_era_start_time = get_epoch_start_datetime_from_blockfrost(actual_epoch)
+                    # actual_era_start_time = get_epoch_start_datetime_from_blockfrost(actual_epoch)
+                    actual_era_start_time = get_epoch_start_datetime_from_explorer(env, actual_epoch)
                 else:
                     actual_era_start_time = get_epoch_start_datetime_from_explorer(env, actual_epoch)
                 actual_era_dict = {"start_epoch": actual_epoch,
