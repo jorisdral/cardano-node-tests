@@ -57,7 +57,14 @@ class TestLedgerState:
         if len(stake_pool_ids) > 200:
             pytest.skip("Skipping on this testnet, there's too many pools.")
 
-        ledger_state = clusterlib_utils.get_ledger_state(cluster_obj=cluster)
+        try:
+            ledger_state = clusterlib_utils.get_ledger_state(cluster_obj=cluster)
+        except AssertionError:
+            ledger_state_str = cluster.query_cli(["ledger-state"])
+            with open(f"{temp_template}_ledger_state.json", "w", encoding="utf-8") as fp_out:
+                fp_out.write(ledger_state_str)
+            raise
+
         clusterlib_utils.save_ledger_state(
             cluster_obj=cluster,
             state_name=temp_template,
