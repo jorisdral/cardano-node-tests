@@ -1733,3 +1733,93 @@ class TestMintingNegative:
 
             assert "MuxBearerClosed" in err
             time.sleep(10)
+
+    @allure.link(helpers.get_vcs_link())
+    @pytest.mark.skipif(
+        VERSIONS.transaction_era < VERSIONS.BABBAGE,
+        reason="runs only with Babbage+ TX",
+    )
+    @pytest.mark.parametrize(
+        "ttl",
+        (100, 200, 300, 400, 500, 600, 700, 800, 900, 1000),
+    )
+    @pytest.mark.parametrize("iteration", range(1, 5))
+    def test_past_horizon_multi(
+        self,
+        cluster: clusterlib.ClusterLib,
+        payment_addrs: List[clusterlib.AddressRecord],
+        ttl: int,
+        iteration: int,
+    ):
+        """Test minting a token with ttl too far in the future."""
+        temp_template = f"{common.get_test_id(cluster)}_{iteration}_{ttl}"
+        payment_addr = payment_addrs[0]
+        issuer_addr = payment_addrs[1]
+
+        lovelace_amount = 2_000_000
+        token_amount = 5
+        fee_txsize = 600_000
+
+        minting_cost = plutus_common.compute_cost(
+            execution_cost=plutus_common.MINTING_COST, protocol_params=cluster.get_protocol_params()
+        )
+
+        # Step 1: fund the token issuer
+
+        mint_utxos, collateral_utxos, __ = _fund_issuer(
+            cluster_obj=cluster,
+            temp_template=temp_template,
+            payment_addr=payment_addr,
+            issuer_addr=issuer_addr,
+            minting_cost=minting_cost,
+            amount=lovelace_amount,
+            fee_txsize=fee_txsize,
+        )
+
+        # Step 2: try to mint the "qacoin"
+
+        policyid = cluster.get_policyid(plutus_common.MINTING_PLUTUS)
+        asset_name = f"qacoin{clusterlib.get_rand_str(4)}".encode("utf-8").hex()
+        token = f"{policyid}.{asset_name}"
+        mint_txouts = [
+            clusterlib.TxOut(address=issuer_addr.address, amount=token_amount, coin=token),
+        ]
+
+        plutus_mint_data = [
+            clusterlib.Mint(
+                txouts=mint_txouts,
+                script_file=plutus_common.MINTING_PLUTUS,
+                collaterals=collateral_utxos,
+                execution_units=(
+                    plutus_common.MINTING_COST.per_time,
+                    plutus_common.MINTING_COST.per_space,
+                ),
+                redeemer_cbor_file=plutus_common.REDEEMER_42_CBOR,
+            )
+        ]
+
+        tx_files_step2 = clusterlib.TxFiles(
+            signing_key_files=[issuer_addr.skey_file],
+        )
+        txouts_step2 = [
+            clusterlib.TxOut(address=issuer_addr.address, amount=lovelace_amount),
+            *mint_txouts,
+        ]
+
+        cluster.wait_for_new_block()
+        tx_raw_output_step2 = cluster.build_raw_tx_bare(
+            out_file=f"{temp_template}_step2_tx.body",
+            txins=mint_utxos,
+            txouts=txouts_step2,
+            mint=plutus_mint_data,
+            tx_files=tx_files_step2,
+            fee=minting_cost.fee + fee_txsize,
+            invalid_hereafter=cluster.get_slot_no() + ttl,
+        )
+        tx_signed_step2 = cluster.sign_tx(
+            tx_body_file=tx_raw_output_step2.out_file,
+            signing_key_files=tx_files_step2.signing_key_files,
+            tx_name=f"{temp_template}_step2",
+        )
+
+        cluster.submit_tx(tx_file=tx_signed_step2, txins=mint_utxos)
